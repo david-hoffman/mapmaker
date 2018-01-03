@@ -17,7 +17,7 @@ import matplotlib
 import matplotlib.pyplot as plt
 from matplotlib.colors import PowerNorm, LogNorm
 from dphplotting import auto_adjust
-import click
+import warnings
 
 
 def load_stack(top_dir):
@@ -32,11 +32,13 @@ def load_stack(top_dir):
     paths = []
     # itereate through number of channels
     for i in range(100):
-        subpaths = sorted(glob.glob(top_dir + "/*ch{}*.tif".format(i)))
+        subpaths = sorted(glob.glob(top_dir + "*ch{}*.tif".format(i)))
         if not len(subpaths):
             break
         paths.append(subpaths)
     # Paths are read as a raster of left to right, top to bottom
+    if not len(paths):
+        raise RuntimeError("No files found.")
     return np.asarray([[tif.imread(p) for p in subpaths] for subpaths in paths])
 
 
@@ -105,7 +107,7 @@ def extract_locations(top_level_path):
             try:
                 d[path] = (set(re_y.findall("\n".join(tmp))).pop(), set(re_x.findall("\n".join(tmp))).pop())
             except KeyError:
-                print("No information in", path)
+                warnings.warn("No information in {}".format(path))
                 continue
     return {clean_path(k): np.asarray(v).astype(float) for k, v in d.items()}
 
@@ -124,31 +126,41 @@ def make_rec(y, x, width, height, linewidth):
 
 
 def make_fig(montage_data, extent, locations, savename, scalefactor, auto=True, **kwargs):
+    """"""
+    # default dpi means that each pixel is equivalent to a single printers point
     dpi = 72
+    # calculate the right number of inches to have the right number of pixels
     shape = np.array(montage_data.shape)
     inches = shape / dpi * scalefactor
+    # make the figure
     fig, ax = plt.subplots(figsize=inches)
+    # set up default kwargs
     default_vs = {k: v for k, v in {k: kwargs.pop(k, None) for k in ("vmin", "vmax")}.items() if v is not None}
+    # norm the data and auto adjust limits if requested
     normed_data = PowerNorm(kwargs.pop("gamma", 0.5), **default_vs)(montage_data)
     if auto:
         auto_vs = auto_adjust(normed_data)
     else:
         auto_vs = dict()
     kwargs.update(auto_vs)
-    kwargs
+    # do the actual plot
     ax.matshow(normed_data, extent=extent, **kwargs)
+    # annotate the plot
+    xmax, xmin, ymin, ymax = extent
     for title, point in locations.items():
         diameter = 512 * 0.13
         # right now y, x points are recorded in mm not um so we have to convert them.
         y, x = point * 1000
-        ax.add_patch(make_rec(y, x, diameter, diameter, 20 * scalefactor))
+        # check if location is within range.
+        if xmax >= x >= xmin and ymax >= y >= ymin:
+            ax.add_patch(make_rec(y, x, diameter, diameter, max(2, 20 * scalefactor)))
 
-        ax.annotate(textwrap.fill(title, 20), xy=(x, y), xycoords="data",
-                    bbox=dict(pad=0.3, color=(1, 1, 1, 0.5), lw=0),
-                    xytext=(x, y + diameter / 2 * 1.3),
-                    textcoords='data', color='k',
-                    horizontalalignment='center', verticalalignment='bottom',
-                    multialignment="center", fontsize=120 * scalefactor)
+            ax.annotate(textwrap.fill(title, 20), xy=(x, y), xycoords="data",
+                        bbox=dict(pad=0.3, color=(1, 1, 1, 0.5), lw=0),
+                        xytext=(x, y + diameter / 2 * 1.3),
+                        textcoords='data', color='k',
+                        horizontalalignment='center', verticalalignment='bottom',
+                        multialignment="center", fontsize=max(12, 120 * scalefactor))
     # fix borders and such
     fig.subplots_adjust(left=0, right=1, top=1, bottom=0, wspace=0, hspace=0)
     # save the fig
