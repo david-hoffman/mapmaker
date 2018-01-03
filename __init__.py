@@ -13,9 +13,10 @@ import textwrap
 import numpy as np
 import pandas as pd
 import skimage.external.tifffile as tif
+import matplotlib
 import matplotlib.pyplot as plt
 from matplotlib.colors import PowerNorm, LogNorm
-
+from dphplotting import auto_adjust
 import click
 
 
@@ -95,6 +96,8 @@ def clean_path(path):
 
 def extract_locations(top_level_path):
     """Extract locations from SIM data"""
+    re_x = re.compile("(?<=X \(mm\) = )(-?\d+\.\d+)")
+    re_y = re.compile("(?<=Y \(mm\) = )(-?\d+\.\d+)")
     d = dict()
     for path in glob.iglob(top_level_path + "/*/*config.txt"):
         with open(path, "r") as f:
@@ -114,19 +117,19 @@ def extract_locations_csv(csv_path):
     return {dd["Name"]: dd[["Y (mm)", "X (mm)"]].values.astype(float) for i, dd in d.iterrows()}
 
 
-def make_rec(y, x, width, height):
+def make_rec(y, x, width, height, linewidth):
     """Make a rectangle of width and height _centered_ on (y, x)"""
     return plt.Rectangle((x - width / 2, y - height / 2), width, height,
-                         color='w', linewidth=1, fill=False)
+                         color='w', linewidth=linewidth, fill=False)
 
 
 def make_fig(montage_data, extent, locations, savename, scalefactor, auto=True, **kwargs):
-    dpi = 300
+    dpi = 72
     shape = np.array(montage_data.shape)
     inches = shape / dpi * scalefactor
     fig, ax = plt.subplots(figsize=inches)
     default_vs = {k: v for k, v in {k: kwargs.pop(k, None) for k in ("vmin", "vmax")}.items() if v is not None}
-    normed_data = PowerNorm(0.5)(montage_data, **default_vs)
+    normed_data = PowerNorm(kwargs.pop("gamma", 0.5), **default_vs)(montage_data)
     if auto:
         auto_vs = auto_adjust(normed_data)
     else:
@@ -138,17 +141,16 @@ def make_fig(montage_data, extent, locations, savename, scalefactor, auto=True, 
         diameter = 512 * 0.13
         # right now y, x points are recorded in mm not um so we have to convert them.
         y, x = point * 1000
-        ax.add_patch(make_rec(y, x, diameter, diameter))
+        ax.add_patch(make_rec(y, x, diameter, diameter, 20 * scalefactor))
 
         ax.annotate(textwrap.fill(title, 20), xy=(x, y), xycoords="data",
                     bbox=dict(pad=0.3, color=(1, 1, 1, 0.5), lw=0),
                     xytext=(x, y + diameter / 2 * 1.3),
                     textcoords='data', color='k',
                     horizontalalignment='center', verticalalignment='bottom',
-                    multialignment="center")
+                    multialignment="center", fontsize=120 * scalefactor)
     # fix borders and such
     fig.subplots_adjust(left=0, right=1, top=1, bottom=0, wspace=0, hspace=0)
     # save the fig
     bbox = matplotlib.transforms.Bbox(((0, 0), inches))
-    fig.savefig(savename, dpi=300, bbox_inches=bbox)
-
+    fig.savefig(savename, dpi=dpi, bbox_inches=bbox)
