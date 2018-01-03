@@ -60,7 +60,7 @@ def montage(stack, shape):
     # reshape the stack
     reshaped_stack = stack.reshape(new_shape)
     # align the tiles
-    reshaped_stack = np.rollaxis(reshaped_stack, 1, 4)
+    reshaped_stack = np.rollaxis(reshaped_stack, 2, 4)
     # merge and return.
     return reshaped_stack.reshape(c, dy * ny, dx * nx)
 
@@ -120,13 +120,20 @@ def make_rec(y, x, width, height):
                          color='w', linewidth=1, fill=False)
 
 
-def make_fig(montage_data, extent, locations, savename, scalefactor):
+def make_fig(montage_data, extent, locations, savename, scalefactor, auto=True, **kwargs):
     dpi = 300
     shape = np.array(montage_data.shape)
     inches = shape / dpi * scalefactor
     fig, ax = plt.subplots(figsize=inches)
-    ax.matshow(montage_data, norm=PowerNorm(0.5), extent=extent,
-               cmap="inferno", vmin=800, vmax=8000)
+    default_vs = {k: v for k, v in {k: kwargs.pop(k, None) for k in ("vmin", "vmax")}.items() if v is not None}
+    normed_data = PowerNorm(0.5)(montage_data, **default_vs)
+    if auto:
+        auto_vs = auto_adjust(normed_data)
+    else:
+        auto_vs = dict()
+    kwargs.update(auto_vs)
+    kwargs
+    ax.matshow(normed_data, extent=extent, **kwargs)
     for title, point in locations.items():
         diameter = 512 * 0.13
         # right now y, x points are recorded in mm not um so we have to convert them.
@@ -134,12 +141,14 @@ def make_fig(montage_data, extent, locations, savename, scalefactor):
         ax.add_patch(make_rec(y, x, diameter, diameter))
 
         ax.annotate(textwrap.fill(title, 20), xy=(x, y), xycoords="data",
-                    xytext=(x + diameter / 2, y + diameter / 2 * 1.5),
+                    bbox=dict(pad=0.3, color=(1, 1, 1, 0.5), lw=0),
+                    xytext=(x, y + diameter / 2 * 1.3),
                     textcoords='data', color='k',
-                    backgroundcolor=(1, 1, 1, 0.5))
+                    horizontalalignment='center', verticalalignment='bottom',
+                    multialignment="center")
     # fix borders and such
-    # ax.axis("off")
     fig.subplots_adjust(left=0, right=1, top=1, bottom=0, wspace=0, hspace=0)
     # save the fig
     bbox = matplotlib.transforms.Bbox(((0, 0), inches))
     fig.savefig(savename, dpi=300, bbox_inches=bbox)
+
