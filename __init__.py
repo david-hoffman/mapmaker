@@ -18,7 +18,6 @@ import matplotlib.pyplot as plt
 from matplotlib.colors import PowerNorm, LogNorm
 from dphplotting import auto_adjust
 import warnings
-import tqdm
 
 
 def load_stack(top_dir):
@@ -39,8 +38,8 @@ def load_stack(top_dir):
         paths.append(subpaths)
     # Paths are read as a raster of left to right, top to bottom
     if not len(paths):
-        raise RuntimeError("No files found.")
-    return np.asarray([[tif.imread(p) for p in tqdm.tqdm(subpaths)] for subpaths in paths])
+        raise RuntimeError("No files found in {}".format(top_dir))
+    return np.asarray([[tif.imread(p) for p in subpaths] for subpaths in paths])
 
 
 def read_montage_settings(path):
