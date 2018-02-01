@@ -36,7 +36,7 @@ def get_locations(location_path):
 @click.option('--program-type', type=click.Choice(['VSIM', 'SPIM']), default="VSIM", help='Which program took the SIM data.')
 def cli(montage_dir, location_path, scale, program_type):
     """Mark imaged locations on montaged widefield data"""
-    if not location_path and click.confirm('No locations indicated, do you want to continue?', abort=True):
+    if not location_path and click.confirm('No locations indicated, do you want to continue?', default=True, abort=True):
         sim_locations = dict()
     else:
         sim_locations = get_locations(location_path)
