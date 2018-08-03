@@ -102,6 +102,7 @@ def extract_locations(top_level_path):
     re_y = re.compile("(?<=Y \(mm\) = )(-?\d+\.\d+)")
     d = dict()
     for path in glob.iglob(top_level_path + "/*/*config.txt"):
+        path = os.path.abspath(path)
         with open(path, "r") as f:
             tmp = f.readlines()
             try:
