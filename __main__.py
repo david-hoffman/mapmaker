@@ -67,7 +67,7 @@ def cli(montage_dir, location_path, scale, program_type):
                      scale, cmap="Greys_r", gamma=0.25)
 
     tocompute = dask.delayed([save_montage(montage_path) for montage_path in montage_dir])
-    tocompute.compute(get=dask.multiprocessing.get)
+    tocompute.compute(scheduler="processes")
         
 
 if __name__ == '__main__':
