@@ -13,6 +13,7 @@ import os
 import click
 import dask
 import dask.multiprocessing
+import skimage.external.tifffile as tiff
 
 
 def get_locations(location_path):
@@ -33,8 +34,10 @@ def get_locations(location_path):
 @click.option('--montage-dir', '-m', multiple=True, type=click.Path(exists=True, file_okay=False), help='Directory containing montage data')
 @click.option('--location-path', '-l', default=list(), multiple=True, type=click.Path(exists=True), help='Top level directory containing SIM data or .csv file with locations')
 @click.option('--scale', '-s', type=float, default=0.1, help='Scaling for the output images')
+@click.option('--gamma', '-g', type=float, default=0.25, help='Gamma correction for the output images')
 @click.option('--program-type', type=click.Choice(['VSIM', 'SPIM']), default="VSIM", help='Which program took the SIM data.')
-def cli(montage_dir, location_path, scale, program_type):
+@click.option('--tif', '-t', is_flag=True, help='Save at full bit depth')
+def cli(montage_dir, location_path, scale, gamma, program_type, tif):
     """Mark imaged locations on montaged widefield data"""
     if not location_path and click.confirm('No locations indicated, do you want to continue?', default=True, abort=True):
         sim_locations = dict()
@@ -61,10 +64,14 @@ def cli(montage_dir, location_path, scale, program_type):
         montage_data = montage(data, montage_shape)
         extent = calc_extent(tile0_loc, data.shape[-2:], montage_shape)
         basename = os.path.dirname(montage_path) + "_ch{}.jpg"
+
         for i, channel in enumerate(montage_data):
             click.echo("Saving {}".format(basename.format(i)))
-            make_fig(channel, extent, sim_locations, basename.format(i),
-                     scale, cmap="Greys_r", gamma=0.25)
+            if tif:
+                tiff.imsave(basename.format(i).replace(".jpg", ".tif"), channel)
+            else:
+                make_fig(channel, extent, sim_locations, basename.format(i),
+                         scale, cmap="Greys_r", gamma=gamma)
 
     tocompute = dask.delayed([save_montage(montage_path) for montage_path in montage_dir])
     tocompute.compute(scheduler="processes")
