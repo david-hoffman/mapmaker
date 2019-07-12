@@ -39,7 +39,7 @@ def get_locations(location_path):
 @click.option('--tif', '-t', is_flag=True, help='Save at full bit depth')
 def cli(montage_dir, location_path, scale, gamma, program_type, tif):
     """Mark imaged locations on montaged widefield data"""
-    if not location_path and click.confirm('No locations indicated, do you want to continue?', default=True, abort=True):
+    if tif or (not location_path and click.confirm('No locations indicated, do you want to continue?', default=True, abort=True)):
         sim_locations = dict()
     else:
         sim_locations = get_locations(location_path)
