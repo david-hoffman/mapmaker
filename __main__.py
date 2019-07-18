@@ -61,17 +61,21 @@ def cli(montage_dir, location_path, scale, gamma, program_type, tif):
         with warnings.catch_warnings():
             warnings.simplefilter("ignore")
             data = load_stack(montage_path)
-        montage_data = montage(data, montage_shape)
-        extent = calc_extent(tile0_loc, data.shape[-2:], montage_shape)
-        basename = os.path.dirname(montage_path) + "_ch{}.jpg"
+        try:
+            montage_data = montage(data, montage_shape)
+            extent = calc_extent(tile0_loc, data.shape[-2:], montage_shape)
+            basename = os.path.dirname(montage_path) + "_ch{}.jpg"
 
-        for i, channel in enumerate(montage_data):
-            click.echo("Saving {}".format(basename.format(i)))
-            if tif:
-                tiff.imsave(basename.format(i).replace(".jpg", ".tif"), channel)
-            else:
-                make_fig(channel, extent, sim_locations, basename.format(i),
-                         scale, cmap="Greys_r", gamma=gamma)
+            for i, channel in enumerate(montage_data):
+                click.echo("Saving {}".format(basename.format(i)))
+                if tif:
+                    tiff.imsave(basename.format(i).replace(".jpg", ".tif"), channel)
+                else:
+                    make_fig(channel, extent, sim_locations, basename.format(i),
+                             scale, cmap="Greys_r", gamma=gamma)
+        except AssertionError as e:
+            click.echo("Montage {} failed: {}".format(montage_path, e))
+            return None
 
     tocompute = dask.delayed([save_montage(montage_path) for montage_path in montage_dir])
     tocompute.compute(scheduler="processes")
