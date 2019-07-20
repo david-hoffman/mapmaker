@@ -51,17 +51,18 @@ def cli(montage_dir, location_path, scale, gamma, program_type, tif):
     def save_montage(montage_path):
         """Read in and save the data"""
         # add trailing slash, just to be safe
-        montage_path = os.path.join(montage_path, "")
         try:
-            montage_shape, tile0_loc = read_montage_settings(glob.glob(montage_path + "3D settings_*.csv")[0])
-        except IndexError as e:
-            click.echo("No settings file found in {}".format(montage_path))
-            raise e
-        click.echo("Reading data from {}".format(montage_path))
-        with warnings.catch_warnings():
-            warnings.simplefilter("ignore")
-            data = load_stack(montage_path)
-        try:
+            montage_path = os.path.join(montage_path, "")
+            try:
+                montage_shape, tile0_loc = read_montage_settings(glob.glob(montage_path + "3D settings_*.csv")[0])
+            except IndexError as e:
+                click.echo("No settings file found in {}".format(montage_path))
+                raise e
+            click.echo("Reading data from {}".format(montage_path))
+            with warnings.catch_warnings():
+                warnings.simplefilter("ignore")
+                data = load_stack(montage_path)
+            
             montage_data = montage(data, montage_shape)
             extent = calc_extent(tile0_loc, data.shape[-2:], montage_shape)
             basename = os.path.dirname(montage_path) + "_ch{}.jpg"
@@ -73,7 +74,7 @@ def cli(montage_dir, location_path, scale, gamma, program_type, tif):
                 else:
                     make_fig(channel, extent, sim_locations, basename.format(i),
                              scale, cmap="Greys_r", gamma=gamma)
-        except AssertionError as e:
+        except Exception as e:
             click.echo("Montage {} failed: {}".format(montage_path, e))
             return None
 
