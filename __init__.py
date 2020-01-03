@@ -45,8 +45,8 @@ def load_stack(top_dir):
 def read_montage_settings(path):
     """Read the montage settings from the "3D Settings*.csv" file"""
     overall_settings = pd.read_csv(path, nrows=1)
-    tile_settings = pd.read_csv(path, skiprows=2, header=0).iloc[1:-2].dropna(1, 'all')
-    shape = tuple(overall_settings[['# Subvolume Y', '# Subvolume X']].values.squeeze())
+    tile_settings = pd.read_csv(path, skiprows=2, header=0).iloc[1:-2].dropna(1, "all")
+    shape = tuple(overall_settings[["# Subvolume Y", "# Subvolume X"]].values.squeeze())
     # center in um
     tile0_loc = tile_settings.iloc[0][["Absolute Y (um)", "Absolute X (um)"]].values
     return shape, tile0_loc.astype(float)
@@ -59,7 +59,9 @@ def montage(stack, shape):
     dy, dx = shape
     new_shape = c, dy, dx, ny, nx
     # sanity check
-    assert dy * dx == ntiles, "Number of tiles, {}, doesn't match montage dimensions ({}, {})".format(ntiles, dy, dx)
+    assert (
+        dy * dx == ntiles
+    ), "Number of tiles, {}, doesn't match montage dimensions ({}, {})".format(ntiles, dy, dx)
     # reshape the stack
     reshaped_stack = stack.reshape(new_shape)
     # align the tiles
@@ -106,7 +108,10 @@ def extract_locations(top_level_path):
         with open(path, "r") as f:
             tmp = f.readlines()
             try:
-                d[path] = (set(re_y.findall("\n".join(tmp))).pop(), set(re_x.findall("\n".join(tmp))).pop())
+                d[path] = (
+                    set(re_y.findall("\n".join(tmp))).pop(),
+                    set(re_x.findall("\n".join(tmp))).pop(),
+                )
             except KeyError:
                 warnings.warn("No information in {}".format(path))
                 continue
@@ -123,8 +128,9 @@ def extract_locations_csv(csv_path):
 
 def make_rec(y, x, width, height, linewidth):
     """Make a rectangle of width and height _centered_ on (y, x)"""
-    return plt.Rectangle((x - width / 2, y - height / 2), width, height,
-                         color='w', linewidth=linewidth, fill=False)
+    return plt.Rectangle(
+        (x - width / 2, y - height / 2), width, height, color="w", linewidth=linewidth, fill=False
+    )
 
 
 def make_fig(montage_data, extent, locations, savename, scalefactor, auto=True, **kwargs):
@@ -137,7 +143,11 @@ def make_fig(montage_data, extent, locations, savename, scalefactor, auto=True, 
     # make the figure
     fig, ax = plt.subplots(figsize=inches)
     # set up default kwargs
-    default_vs = {k: v for k, v in {k: kwargs.pop(k, None) for k in ("vmin", "vmax")}.items() if v is not None}
+    default_vs = {
+        k: v
+        for k, v in {k: kwargs.pop(k, None) for k in ("vmin", "vmax")}.items()
+        if v is not None
+    }
     # norm the data and auto adjust limits if requested
     normed_data = PowerNorm(kwargs.pop("gamma", 0.5), **default_vs)(montage_data)
     if auto:
@@ -157,12 +167,19 @@ def make_fig(montage_data, extent, locations, savename, scalefactor, auto=True, 
         if xmax >= x >= xmin and ymax >= y >= ymin:
             ax.add_patch(make_rec(y, x, diameter, diameter, max(2, 20 * scalefactor)))
 
-            ax.annotate(textwrap.fill(title, 20), xy=(x, y), xycoords="data",
-                        bbox=dict(pad=0.3, color=(1, 1, 1, 0.5), lw=0),
-                        xytext=(x, y + diameter / 2 * 1.3),
-                        textcoords='data', color='k',
-                        horizontalalignment='center', verticalalignment='bottom',
-                        multialignment="center", fontsize=max(12, 120 * scalefactor))
+            ax.annotate(
+                textwrap.fill(title, 20),
+                xy=(x, y),
+                xycoords="data",
+                bbox=dict(pad=0.3, color=(1, 1, 1, 0.5), lw=0),
+                xytext=(x, y + diameter / 2 * 1.3),
+                textcoords="data",
+                color="k",
+                horizontalalignment="center",
+                verticalalignment="bottom",
+                multialignment="center",
+                fontsize=max(12, 120 * scalefactor),
+            )
     # fix borders and such
     fig.subplots_adjust(left=0, right=1, top=1, bottom=0, wspace=0, hspace=0)
     # save the fig
